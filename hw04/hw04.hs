@@ -84,6 +84,85 @@ parseMarkets file
 parseMarkets :: B.ByteString -> Maybe [Market]
 parseMarkets file = decode file
 -}
---Q5
---loadData :: IO [Market]
 
+--Q5
+loadData :: IO [Market]
+loadData = B.readFile "markets.json" >>= return . getData . parseMarkets
+          where
+            getData :: Maybe [Market] -> [Market]
+            getData Nothing = []
+            getData (Just a) = a
+{-
+loadData
+     = if ((B.readFile "markets.json" >>= parseMarkets) == Nothing) then fail "Invalid parsing"
+       else (B.readFile "markets.json" >>= return . getData . parseMarkets)
+          where
+            getData :: Maybe [Market] -> [Market]
+            getData Nothing = []
+            getData (Just a) = a
+        why it does not work?
+-}
+
+--Q6
+data OrdList a where
+   OrdList :: {getordList :: [a]} -> OrdList a
+   deriving (Eq, Show)
+
+instance Ord a => Monoid (OrdList a) where
+      mempty = OrdList []
+      OrdList a `mappend` OrdList b = OrdList(sort a b)
+       where
+         sort :: Ord a => [a] -> [a] -> [a] 
+         sort [] b = b
+         sort a [] = a
+         sort a b | (head a) < (head b) || (head a) == (head b) =  [head a] ++ (sort (tail a) b) 
+                  | (head a) > (head b) = [head b] ++ (sort a (tail b)) 
+         sort _ _ = []
+{-
+test1 :: OrdList Integer
+test1 = OrdList [1,8,3]
+test2 :: OrdList Integer
+test2 = OrdList [4,5]
+
+combined :: OrdList Integer
+combined = test1 <> test2
+-}
+
+type Searcher m = T.Text -> [Market] -> m
+
+--Q7
+search :: Monoid m => (Market -> m) -> Searcher m
+search f name list = let easy = map (marketWithName) list in
+              combined f $ extract $ find_mkt name easy
+
+        where
+          marketWithName :: Market -> (T.Text, Market)
+          marketWithName mkt@(Market {marketname = name}) = (name,mkt)
+
+          find_mkt :: T.Text -> [(T.Text, Market)] -> [(T.Text, Market)]
+          find_mkt name (x:xs)
+                | (name == fst x) == True = (find_mkt name xs) ++ x:[]
+                | otherwise = (find_mkt name xs)
+
+          extract :: [(T.Text, Market)] -> [Market]
+          extract (x:xs) = (extract xs) ++ [(snd x)]
+
+-- when write helper function ,should not assume the type is the same as main function
+-- here, ghc does not know what m is , so we need to constrain m to Monoid type to let it
+-- use mappend and mempty
+          combined :: Monoid m => (Market -> m) -> [Market] -> m
+          combined f (x:xs) = (combined f xs) <> (f x)
+          combined f [] = mempty
+
+--Q8
+firstFound :: Searcher (Maybe Market)
+firstFound name list = whether $ search store name list
+
+               where                    
+                  store :: Market -> OrdList Market
+                  store mkt = OrdList [mkt]
+
+                  whether :: OrdList Market -> Maybe Market
+                  whether list
+                            | (getordList list) == [] = Nothing
+                            | otherwise = Just (head (getordList list))
