@@ -3,7 +3,6 @@
    Name : Tianming Xu
    email : txu1@haverford.edu
    collaborators : Eileen, Kevin, Trista
-
 -}
 module Hw04 where
 import Data.Aeson
@@ -118,11 +117,94 @@ instance Ord a => Monoid (OrdList a) where
          sort a b | (head a) < (head b) || (head a) == (head b) =  [head a] ++ (sort (tail a) b) 
                   | (head a) > (head b) = [head b] ++ (sort a (tail b)) 
          sort _ _ = []
-
+{-
 test1 :: OrdList Integer
 test1 = OrdList [1,8,3]
 test2 :: OrdList Integer
 test2 = OrdList [4,5]
-
 combined :: OrdList Integer
 combined = test1 <> test2
+-}
+
+type Searcher m = T.Text -> [Market] -> m
+
+--Q7
+search :: Monoid m => (Market -> m) -> Searcher m
+search f name list = let easy = map (marketWithName) list in
+              foldMap f $ extract $ find_mkt name easy
+
+        where
+          marketWithName :: Market -> (T.Text, Market)
+          marketWithName mkt@(Market {marketname = name}) = (name,mkt)
+
+          find_mkt :: T.Text -> [(T.Text, Market)] -> [(T.Text, Market)]
+	  find_mkt _ [] = []
+          find_mkt name (x:xs)
+                | (name == fst x) =  [x] ++ (find_mkt name xs)
+                | otherwise = find_mkt name xs
+
+          extract :: [(T.Text, Market)] -> [Market]
+	  extract [] = []
+          extract (x:xs) = [(snd x)] ++ (extract xs)
+
+-- when write helper function ,should not assume the type is the same as main function
+-- here, ghc does not know what m is , so we need to constrain m to Monoid type to let it
+-- use mappend and mempty
+--          combined :: Monoid m => (Market -> m) -> [Market] -> m
+--          combined f (x:xs) = (combined f xs) <> (f x)
+--          combined f [] = mempty
+--we can use foldmap function here
+--Q8
+compose2 :: (c -> d) -> (a -> b -> c) -> a -> b -> d
+compose2 = (.) . (.)
+
+firstFound :: Searcher (Maybe Market)
+firstFound = compose2 getFirst $ search (First . store) 
+
+               where                    
+                  store :: Market -> Maybe Market
+                  store market = Just market
+
+name :: T.Text
+name = "San Felipe Farmers Market"
+
+--Q9
+lastFound :: Searcher (Maybe Market)
+lastFound = compose2 getLast $ search (Last . store)
+               where                    
+                  store :: Market -> Maybe Market
+                  store market = Just market
+
+--Q10
+allFound :: Searcher [Market]
+allFound = search store 
+               where                    
+                  store :: Market -> [Market]
+                  store market = [market]
+
+--Q11
+numberFound :: Searcher Int
+numberFound = compose2 getSum $ search count
+               where                    
+                  count :: Market -> Sum Int
+                  count market = Sum 1
+		  
+{-
+               where
+                  count :: Searcher [Market] -> Int
+		  count _ [] _ = 0
+		  count name (x : xs) m = 1 + count name xs m
+-}
+
+--Q12
+instance Ord Market where
+       compare mkt1 mkt2 = compare (y mkt1) (y mkt2)
+instance Eq Market where
+       mkt1 == mkt2 = (y mkt1) == (y mkt2)
+       mkt1 /= mkt2 = (y mkt1) /= (y mkt2)
+
+orderdNtoS :: Searcher [Market]
+orderdNtoS = compose2 getordList $ search (OrdList . store) 
+               where                    
+                  store :: Market -> [Market]
+                  store market = [market]
