@@ -1,13 +1,13 @@
+
 {-# LANGUAGE GADTs, TypeInType, StandaloneDeriving, TypeFamilies,
              TypeOperators, ScopedTypeVariables,UndecidableInstances,
              TypeApplications,AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
 module Assign06 where   -- rename as you please
-
 import Data.Kind ( Type )
 import Data.Type.Equality
-import Prelude hiding (intersperse, (++));
+import Prelude hiding (intersperse,inits);
 data Nat where
   Zero :: Nat
   Succ :: Nat -> Nat
@@ -38,12 +38,12 @@ data SNat :: Nat -> Type where
 data SBool :: Bool -> Type where
   SFalse :: SBool False
   STrue  :: SBool True
-
+{-
 (++) :: Vec n a -> Vec m a -> Vec (n + m) a
 Nil       ++ ys = ys
 (x :> xs) ++ ys = x :> (xs ++ ys)
 infixr 5 ++
-
+-}
 plusZero :: SNat m -> (m + Zero) :~: m
 plusZero SZero      = Refl
 plusZero (SSucc m') = case plusZero m' of Refl -> Refl
@@ -102,6 +102,7 @@ data VecList :: [Nat] -> Type -> Type where
    (:>>) :: Vec n a -> VecList ns a -> VecList (n ': ns) a
 infixr 5 :>>
 
+
 type family a - b where
    a   - Zero           = a
    (Succ a) - (Succ b)  = a - b
@@ -128,3 +129,25 @@ plusBoth n@(SSucc n') m@(SSucc m') = case plusSucc' n m of Refl -> Refl
 prependToAll :: forall n a. a -> SNat n -> Vec n a -> Vec (n + n) a
 prependToAll _ SZero Nil = Nil
 prependToAll sep n@(SSucc n'::SNat n') (x:>xs) = case plusBoth n' n' of Refl -> sep :> x :> prependToAll sep n' xs
+
+--example for using VecList
+stuffs = (1 :> 2 :> Nil) :>> (3 :> Nil) :>> (4 :> 5 :> 6 :> Nil) :>> VLNil
+
+--2.inits
+
+type family (a::[Nat]) ++ (b::[Nat]) where
+  ([]::[Nat]) ++ b = b
+  a ++ ([]::[Nat]) = a	
+  (a:as) ++ b = a : as ++ b 
+--take two inputs such that the first one works as the standard, and keep subtracting the second one to note the actual number. So here we need to use the (-) type family and the base case is zero zero = []
+type family ListOfNat (n ::Nat) :: [Nat] where
+ ListOfNat Zero = '[]
+ ListOfNat (Succ n') = ListOfNat n' ++ '[(Succ n')]
+
+sToNat :: SNat n -> Nat
+sToNat SZero = Zero
+sToNat (SSucc s) = Succ (sToNat s)
+
+inits :: forall n a. SNat n -> Vec n a -> VecList (ListOfNat n) a
+inits SZero Nil = VLNil
+inits n@(SSucc n') (x:>xs) = undefined
