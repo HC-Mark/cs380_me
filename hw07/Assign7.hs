@@ -22,7 +22,9 @@ data Fin :: Nat -> Type where
 
 data EVec :: (Nat -> Type) -> Type -> Type where
   EVec :: p n -> Vec n a -> EVec p a
-
+instance (Show a) => Show (EVec c a) where
+ show (EVec _ v) = show v
+ 
 data AlwaysTrue :: Nat -> Type where
   Always :: AlwaysTrue n
 
