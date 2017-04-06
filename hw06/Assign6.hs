@@ -86,15 +86,30 @@ plusAsso (SSucc m') n l = case plusAsso m' n l of Refl -> Refl
 multZero :: SNat m -> Zero :~: (m * Zero)
 multZero SZero = Refl;
 multZero (SSucc m') = case multZero m' of Refl-> Refl
-
+{-
 switch ::forall n m. SNat m -> SNat n -> ( m * Succ n) :~: ( m + (m * n))
 switch SZero n = case multZero n of Refl ->Refl
 switch (SSucc m') n = undefined
+-}
+--helper for multComm
+--WTP a@(Succ a') * ( b + c) = a * b + a * c
+--IH: a' * ( b + c) = a' * b + a' * c
+--WTP (Succ a') * (b + c) = (Succ a') * b + (Succ a') * c
+--WTP (b + c) + a' * (b + c) = (Succ a') * b + (Succ a') * c
+--WTP (b + c) + (a' * b + a' * c) = (Succ a') * b + (Succ a') * c by IH
+--WTP (b + a' * b) + (c + a' * c) = (Succ a') * b + (Succ a') * c by plusComm
+--WTP (Succ a') * b + (Succ a') * c = (Succ a') * b + (Succ a') * c by definition of mult
+--Refl
+multDist :: SNat a -> SNat b -> SNat c -> a * (b + c) :~: a * b + a * c
+multDist SZero _ _ = case multZero SZero of Refl -> Refl
+--multDist a@(SSucc a') b c = case multDist a' b c of Refl -> case plusComm c (a' * b) of Refl -> Refl
+
 
 multComm :: forall n m. SNat m-> SNat n -> (m*n) :~: (n*m)
 multComm SZero n = case multZero n of Refl -> Refl
 multComm m SZero = case multZero m of Refl -> Refl
-multComm (SSucc m') (SSucc n') = undefined
+multComm m@(SSucc m') n = case multDist n (SSucc SZero) m' of Refl -> case multComm m' n of Refl -> Refl 
+
 
 --implement list function on Vec
 data VecList :: [Nat] -> Type -> Type where
@@ -136,9 +151,11 @@ stuffs = (1 :> 2 :> Nil) :>> (3 :> Nil) :>> (4 :> 5 :> 6 :> Nil) :>> VLNil
 --2.inits
 
 type family (a::[Nat]) ++ (b::[Nat]) where
+{-
   ([]::[Nat]) ++ b = b
   a ++ ([]::[Nat]) = a	
-  (a:as) ++ b = a : as ++ b 
+  (a:as) ++ b = a : as ++ b
+-}
 --take two inputs such that the first one works as the standard, and keep subtracting the second one to note the actual number. So here we need to use the (-) type family and the base case is zero zero = []
 type family ListOfNat (n ::Nat) :: [Nat] where
  ListOfNat Zero = '[]
