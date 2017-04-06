@@ -1,13 +1,13 @@
-
 {-# LANGUAGE GADTs, TypeInType, StandaloneDeriving, TypeFamilies,
              TypeOperators, ScopedTypeVariables,UndecidableInstances,
              TypeApplications,AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
 module Assign06 where   -- rename as you please
+
 import Data.Kind ( Type )
 import Data.Type.Equality
-import Prelude hiding (intersperse,inits);
+import Prelude hiding (intersperse, (++),concat);
 data Nat where
   Zero :: Nat
   Succ :: Nat -> Nat
@@ -38,12 +38,12 @@ data SNat :: Nat -> Type where
 data SBool :: Bool -> Type where
   SFalse :: SBool False
   STrue  :: SBool True
-{-
+
 (++) :: Vec n a -> Vec m a -> Vec (n + m) a
 Nil       ++ ys = ys
 (x :> xs) ++ ys = x :> (xs ++ ys)
 infixr 5 ++
--}
+
 plusZero :: SNat m -> (m + Zero) :~: m
 plusZero SZero      = Refl
 plusZero (SSucc m') = case plusZero m' of Refl -> Refl
@@ -108,7 +108,7 @@ multDist SZero _ _ = case multZero SZero of Refl -> Refl
 multComm :: forall n m. SNat m-> SNat n -> (m*n) :~: (n*m)
 multComm SZero n = case multZero n of Refl -> Refl
 multComm m SZero = case multZero m of Refl -> Refl
-multComm m@(SSucc m') n = case multDist n (SSucc SZero) m' of Refl -> case multComm m' n of Refl -> Refl 
+--multComm m@(SSucc m') n = case multDist n (SSucc SZero) m' of Refl -> case multComm m' n of Refl -> Refl 
 
 
 --implement list function on Vec
@@ -117,6 +117,7 @@ data VecList :: [Nat] -> Type -> Type where
    (:>>) :: Vec n a -> VecList ns a -> VecList (n ': ns) a
 infixr 5 :>>
 
+deriving instance Show a => Show (VecList ns a)
 
 type family a - b where
    a   - Zero           = a
@@ -147,16 +148,21 @@ prependToAll sep n@(SSucc n'::SNat n') (x:>xs) = case plusBoth n' n' of Refl -> 
 
 --example for using VecList
 stuffs = (1 :> 2 :> Nil) :>> (3 :> Nil) :>> (4 :> 5 :> 6 :> Nil) :>> VLNil
-
+stuff = 5 :> 3 :> 8:> Nil
+test1 = (SSucc (SSucc (SSucc SZero)))
 --2.inits
-
-type family (a::[Nat]) ++ (b::[Nat]) where
 {-
+type family (a::[Nat]) ++ (b::[Nat]) where
   ([]::[Nat]) ++ b = b
   a ++ ([]::[Nat]) = a	
   (a:as) ++ b = a : as ++ b
--}
---take two inputs such that the first one works as the standard, and keep subtracting the second one to note the actual number. So here we need to use the (-) type family and the base case is zero zero = []
+-} 
+--take two inputs such that the first one works as the standard, and keep subtracting the second one to note the actual number. So here we need to use the (-) type family and the base case is zero zero = [] inspired by Elieen
+type family ListOfNat (n :: Nat) (m :: Nat) :: [Nat] where
+  ListOfNat Zero Zero = '[]
+  ListOfNat (Succ n') Zero = '[]
+  ListOfNat (Succ n') (Succ m') = Succ m' : ListOfNat (Succ n') m' 
+{-
 type family ListOfNat (n ::Nat) :: [Nat] where
  ListOfNat Zero = '[]
  ListOfNat (Succ n') = ListOfNat n' ++ '[(Succ n')]
@@ -164,7 +170,39 @@ type family ListOfNat (n ::Nat) :: [Nat] where
 sToNat :: SNat n -> Nat
 sToNat SZero = Zero
 sToNat (SSucc s) = Succ (sToNat s)
-
-inits :: forall n a. SNat n -> Vec n a -> VecList (ListOfNat n) a
+-}
+inits :: forall n a. SNat n -> Vec n a -> VecList (ListOfNat n n) a
 inits SZero Nil = VLNil
 inits n@(SSucc n') (x:>xs) = undefined
+
+
+--c. tails
+type family ToList (n :: Nat) :: [Nat] where
+  ToList Zero = '[]
+  ToList (Succ n) = (Succ n) : ToList n
+
+tails :: SNat n -> Vec n a -> VecList (ToList n) a
+tails SZero Nil =  VLNil
+tails n@(SSucc n') x@( y :> ys) = x :>> tails n' ys
+
+--d. intercalate
+type family Sum (ns :: [Nat]) :: Nat where
+   Sum '[]       = Zero
+   Sum (n ': ns) = n + Sum ns
+
+{-
+sumList :: [Nat] -> Nat
+sumList [] = Zero
+sumList (x : xs)  = x + sumList xs
+-}
+concat :: VecList ns a -> Vec (Sum ns) a
+concat VLNil        = Nil
+concat (xs :>> xss) = xs ++ concat xss
+
+intercalate :: SNat n -> Vec n a -> VecList ns a -> Vec (Sum ns + ) a 
+intercalate SZero Nil VLNil = Nil
+intercalate SZero Nil xss = case plusZero @(NatToS (Sum ns)) of Refl -> concat xss
+
+type family NatToS (n :: Nat) :: SNat n where
+   NatToS Zero = SZero
+   NatToS (Succ n') = SSucc (NatToS n')
