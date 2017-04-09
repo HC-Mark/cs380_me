@@ -97,12 +97,14 @@ switch (SSucc m') n = undefined
 --WTP (Succ a') * (b + c) = (Succ a') * b + (Succ a') * c
 --WTP (b + c) + a' * (b + c) = (Succ a') * b + (Succ a') * c
 --WTP (b + c) + (a' * b + a' * c) = (Succ a') * b + (Succ a') * c by IH
---WTP (b + a' * b) + (c + a' * c) = (Succ a') * b + (Succ a') * c by plusComm
+--WTP  b + (c + (a' * b + a' *c))= (Succ a') * b + (Succ a') * c by plusAsso b c (a' * b + a' * c)
+--WTP  b + (c + a' * b) + a' *c = (Succ a') * b + (Succ a') * c by plusAssoR c (a' * b) (a' * c)
+--WTP (b + a' * b) + (c + a' * c) = (Succ a') * b + (Succ a') * c by plusComm  
 --WTP (Succ a') * b + (Succ a') * c = (Succ a') * b + (Succ a') * c by definition of mult
 --Refl
 multDist :: SNat a -> SNat b -> SNat c -> a * (b + c) :~: a * b + a * c
 multDist SZero _ _ = case multZero SZero of Refl -> Refl
---multDist a@(SSucc a') b c = case multDist a' b c of Refl -> case plusComm c (a' * b) of Refl -> Refl
+multDist a@(SSucc a') b c = case multDist a' b c of Refl -> case plusAsso b c n@((a' * b) + (a' * c)) of Refl -> case plusAssoR c n1@(a' *b) n2@(a' *c) of Refl ->  case plusComm c (a' * b) of Refl -> Refl
 
 
 multComm :: forall n m. SNat m-> SNat n -> (m*n) :~: (n*m)
