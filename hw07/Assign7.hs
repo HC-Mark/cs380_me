@@ -87,3 +87,31 @@ concatMap f (x :> xs) = case concatMap f xs of EVec Always xs' -> case f x of EV
 
 testDouble :: a -> EVec AlwaysTrue a
 testDouble n = EVec Always (n :> n :> Nil)
+
+--2.
+--base case has some problems
+unfoldr :: (b -> Maybe (a,b)) -> b -> EVec AlwaysTrue a
+unfoldr f b = case unfoldr f (getSndTup(f b)) of x@(EVec Always xs') -> case f b of
+                                                                               Nothing   -> x
+                                                                               Just(a,b) -> EVec Always (xs' ++ (a :> Nil));
+
+--helper
+getSndTup ::Maybe (a,b) -> b
+getSndTup Nothing = error "can't extract from nothing"
+getSndTup (Just (a,b)) = b
+
+--3.
+data (:>=:) :: Nat -> Nat -> Type where
+  GTEZero :: n :>=: Zero
+  GTESucc :: n :>=: m -> Succ n :>=: Succ m
+
+gteSuccLeft :: (n :>=: m) -> (Succ n :>=: m)
+gteSuccLeft GTEZero       = GTEZero
+gteSuccLeft (GTESucc gte) = GTESucc (gteSuccLeft gte)
+
+takeWhile :: (a -> Bool) -> Vec n a -> EVec ((:>=:) n) a
+takeWhile _ Nil = EVec GTEZero Nil
+takeWhile f (x :> xs) = case takeWhile f xs of
+                                             EVec gte xs'
+                                               | f x -> EVec (GTESucc gte)  (x :> xs')
+                                               | otherwise -> EVec (gteSuccLeft gte) xs' -- how can I directly return this? now it just like filter
