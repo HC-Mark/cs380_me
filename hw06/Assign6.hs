@@ -80,6 +80,10 @@ plusAsso :: forall m n l. SNat m -> SNat n -> SNat l -> (m+n) + l :~: m + (n+l)
 plusAsso SZero n l = Refl;
 plusAsso (SSucc m') n l = case plusAsso m' n l of Refl -> Refl
 
+--helper plusAssoR to prove m + (n+l) :~: (m + n) + l
+plusAssoR :: forall m n l. SNat m -> SNat n -> SNat l -> m + (n+l) :~: (m+n) + l 
+plusAssoR SZero n l = Refl;
+plusAssoR (SSucc m') n l = case plusAsso m' n l of Refl -> Refl
 --3. proof of m * n = n * m
 
 --helper functions
@@ -104,7 +108,7 @@ switch (SSucc m') n = undefined
 --Refl
 multDist :: SNat a -> SNat b -> SNat c -> a * (b + c) :~: a * b + a * c
 multDist SZero _ _ = case multZero SZero of Refl -> Refl
-multDist a@(SSucc a') b c = case multDist a' b c of Refl -> case plusAsso b c n@((a' * b) + (a' * c)) of Refl -> case plusAssoR c n1@(a' *b) n2@(a' *c) of Refl ->  case plusComm c (a' * b) of Refl -> Refl
+--multDist a@(SSucc a') b c = case multDist a' b c of Refl -> case plusAsso b c n@((a' * b) + (a' * c)) of Refl -> case plusAssoR c n1@(a' *b) n2@(a' *c) of Refl ->  case plusComm c (a' * b) of Refl -> Refl
 
 
 multComm :: forall n m. SNat m-> SNat n -> (m*n) :~: (n*m)
@@ -160,10 +164,16 @@ type family (a::[Nat]) ++ (b::[Nat]) where
   (a:as) ++ b = a : as ++ b
 -} 
 --take two inputs such that the first one works as the standard, and keep subtracting the second one to note the actual number. So here we need to use the (-) type family and the base case is zero zero = [] inspired by Elieen
-type family ListOfNat (n :: Nat) (m :: Nat) :: [Nat] where
-  ListOfNat Zero Zero = '[]
-  ListOfNat (Succ n') Zero = '[]
-  ListOfNat (Succ n') (Succ m') = Succ m' : ListOfNat (Succ n') m' 
+
+type family ListOfNat (n :: Nat):: [Nat] where
+  ListOfNat Zero = '[]
+  ListOfNat n = Snoc '[] n
+
+type family Snoc (xs :: [a]) (x :: a) :: [a] where
+  Snoc '[] a = a : '[]
+  Snoc (x : xs) a = x : (Snoc xs a)
+
+
 {-
 type family ListOfNat (n ::Nat) :: [Nat] where
  ListOfNat Zero = '[]
@@ -173,19 +183,26 @@ sToNat :: SNat n -> Nat
 sToNat SZero = Zero
 sToNat (SSucc s) = Succ (sToNat s)
 -}
-inits :: forall n a. SNat n -> Vec n a -> VecList (ListOfNat n n) a
-inits SZero Nil = VLNil
-inits n@(SSucc n') (x:>xs) = undefined
+inits :: forall n a. Vec n a -> VecList (ListOfNat n) a
+inits Nil = VLNil
+inits a@(x:>xs) = case inits xs of xss -> snoc a xss
 
+snoc :: Vec n a -> VecList ns a -> VecList (Snoc ns n) a
+snoc xs (ys :>> yss) = ys :>> snoc xs yss 
 
 --c. tails
 type family ToList (n :: Nat) :: [Nat] where
   ToList Zero = '[]
   ToList (Succ n) = (Succ n) : ToList n
-
+{-
 tails :: SNat n -> Vec n a -> VecList (ToList n) a
 tails SZero Nil =  VLNil
 tails n@(SSucc n') x@( y :> ys) = x :>> tails n' ys
+don't acctually need SNat
+-}
+tails :: Vec n a -> VecList (ToList n) a
+tails Nil =  VLNil
+tails x@( y :> ys) = x :>> tails ys
 
 --d. intercalate
 type family Sum (ns :: [Nat]) :: Nat where
@@ -201,6 +218,7 @@ concat :: VecList ns a -> Vec (Sum ns) a
 concat VLNil        = Nil
 concat (xs :>> xss) = xs ++ concat xss
 
+{-
 intercalate :: SNat n -> Vec n a -> VecList ns a -> Vec (Sum ns + ) a 
 intercalate SZero Nil VLNil = Nil
 intercalate SZero Nil xss = case plusZero @(NatToS (Sum ns)) of Refl -> concat xss
@@ -208,3 +226,4 @@ intercalate SZero Nil xss = case plusZero @(NatToS (Sum ns)) of Refl -> concat x
 type family NatToS (n :: Nat) :: SNat n where
    NatToS Zero = SZero
    NatToS (Succ n') = SSucc (NatToS n')
+-}
