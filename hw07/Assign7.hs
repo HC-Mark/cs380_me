@@ -213,4 +213,21 @@ nub :: (Eq a) => Vec n a -> EVec AlwaysTrue a
 nub Nil = EVec Always Nil
 nub (x :> xs) = case filting x xs of EVec gte ys -> case nub ys of EVec Always ys' -> EVec Always ( x :> ys')
 
---
+--m. delete
+data (:-:) :: Nat -> Nat -> Type where
+  Same :: n :-: m
+  OneOff :: Succ n :-: m
+
+doubleEq ::  (n :-: m) -> (Succ n :-: Succ m)
+doubleEq Same = Same
+doubleEq OneOff = OneOff
+
+delete :: (Eq a) => a -> Vec n a -> EVec ( (:-:) n) a
+delete _ Nil = EVec Same Nil
+delete a ( x :> xs )
+       | a == x = case reproduce xs of EVec Same ys -> EVec OneOff ys
+       | otherwise = case delete a xs of EVec prior ys -> EVec (doubleEq prior) (x :> ys)
+                                         
+reproduce :: Vec n a -> EVec ( (:-:) n) a
+reproduce xs = EVec Same xs
+
