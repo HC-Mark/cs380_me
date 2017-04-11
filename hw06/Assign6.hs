@@ -90,6 +90,12 @@ plusAssoR (SSucc m') n l = case plusAsso m' n l of Refl -> Refl
 multZero :: SNat m -> Zero :~: (m * Zero)
 multZero SZero = Refl;
 multZero (SSucc m') = case multZero m' of Refl-> Refl
+
+
+helper ::SNat n -> SNat m -> (n + n * m) :~: (n * (Succ m))
+helper SZero _ = Refl
+helper n@(SSucc n') m@(SSucc m') = case plusAsso n m (n' * m) of Refl -> case plusComm n' m of Refl -> case helper n' m of Refl -> Refl 
+
 {-
 switch ::forall n m. SNat m -> SNat n -> ( m * Succ n) :~: ( m + (m * n))
 switch SZero n = case multZero n of Refl ->Refl
@@ -106,8 +112,8 @@ switch (SSucc m') n = undefined
 --WTP (b + a' * b) + (c + a' * c) = (Succ a') * b + (Succ a') * c by plusComm  
 --WTP (Succ a') * b + (Succ a') * c = (Succ a') * b + (Succ a') * c by definition of mult
 --Refl
-multDist :: SNat a -> SNat b -> SNat c -> a * (b + c) :~: a * b + a * c
-multDist SZero _ _ = case multZero SZero of Refl -> Refl
+--multDist :: SNat a -> SNat b -> SNat c -> a * (b + c) :~: a * b + a * c
+--multDist SZero _ _ = case multZero SZero of Refl -> Refl
 --multDist a@(SSucc a') b c = case multDist a' b c of Refl -> case plusAsso b c n@((a' * b) + (a' * c)) of Refl -> case plusAssoR c n1@(a' *b) n2@(a' *c) of Refl ->  case plusComm c (a' * b) of Refl -> Refl
 
 
