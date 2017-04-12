@@ -1,13 +1,13 @@
+
 {-# LANGUAGE GADTs, TypeInType, StandaloneDeriving, TypeFamilies,
              TypeOperators, ScopedTypeVariables,UndecidableInstances,
              TypeApplications,AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
 module Assign06 where   -- rename as you please
-
 import Data.Kind ( Type )
 import Data.Type.Equality
-import Prelude hiding (intersperse, (++),concat);
+import Prelude hiding (intersperse,inits);
 data Nat where
   Zero :: Nat
   Succ :: Nat -> Nat
@@ -38,12 +38,12 @@ data SNat :: Nat -> Type where
 data SBool :: Bool -> Type where
   SFalse :: SBool False
   STrue  :: SBool True
-
+{-
 (++) :: Vec n a -> Vec m a -> Vec (n + m) a
 Nil       ++ ys = ys
 (x :> xs) ++ ys = x :> (xs ++ ys)
 infixr 5 ++
-
+-}
 plusZero :: SNat m -> (m + Zero) :~: m
 plusZero SZero      = Refl
 plusZero (SSucc m') = case plusZero m' of Refl -> Refl
@@ -91,36 +91,42 @@ multZero :: SNat m -> Zero :~: (m * Zero)
 multZero SZero = Refl;
 multZero (SSucc m') = case multZero m' of Refl-> Refl
 
+snatSum :: SNat n -> SNat m -> SNat (n + m)
+snatSum SZero m = m
+snatSum (SSucc n') m = SSucc( snatSum n' m)
 
-helper ::SNat n -> SNat m -> (n + n * m) :~: (n * (Succ m))
-helper SZero _ = Refl
-helper n@(SSucc n') m@(SSucc m') = case plusAsso n m (n' * m) of Refl -> case plusComm n' m of Refl -> case helper n' m of Refl -> Refl 
 
-{-
-switch ::forall n m. SNat m -> SNat n -> ( m * Succ n) :~: ( m + (m * n))
-switch SZero n = case multZero n of Refl ->Refl
-switch (SSucc m') n = undefined
--}
+snatTime :: SNat n -> SNat m -> SNat (n * m)
+snatTime SZero _ = SZero
+snatTime (SSucc n') m = snatSum m (snatTime n' m)
+
+-- n' here is SNat instead of Nat
+
+
 --helper for multComm
 --WTP a@(Succ a') * ( b + c) = a * b + a * c
 --IH: a' * ( b + c) = a' * b + a' * c
 --WTP (Succ a') * (b + c) = (Succ a') * b + (Succ a') * c
 --WTP (b + c) + a' * (b + c) = (Succ a') * b + (Succ a') * c
 --WTP (b + c) + (a' * b + a' * c) = (Succ a') * b + (Succ a') * c by IH
---WTP  b + (c + (a' * b + a' *c))= (Succ a') * b + (Succ a') * c by plusAsso b c (a' * b + a' * c)
---WTP  b + (c + a' * b) + a' *c = (Succ a') * b + (Succ a') * c by plusAssoR c (a' * b) (a' * c)
---WTP (b + a' * b) + (c + a' * c) = (Succ a') * b + (Succ a') * c by plusComm  
+--WTP (b + a' * b) + (c + a' * c) = (Succ a') * b + (Succ a') * c by plusComm
 --WTP (Succ a') * b + (Succ a') * c = (Succ a') * b + (Succ a') * c by definition of mult
 --Refl
 --multDist :: SNat a -> SNat b -> SNat c -> a * (b + c) :~: a * b + a * c
 --multDist SZero _ _ = case multZero SZero of Refl -> Refl
---multDist a@(SSucc a') b c = case multDist a' b c of Refl -> case plusAsso b c n@((a' * b) + (a' * c)) of Refl -> case plusAssoR c n1@(a' *b) n2@(a' *c) of Refl ->  case plusComm c (a' * b) of Refl -> Refl
+--multDist a@(SSucc a') b c = case multDist a' b c of Refl -> case plusComm c (a' * b) of Refl -> Refl
 
+
+
+multSucc ::SNat n -> SNat m -> (n + n * m) :~: (n * (Succ m))
+multSucc SZero _ = Refl
+multSucc (SSucc n') SZero =  case multZero (SSucc n') of Refl -> case plusZero (SSucc n') of Refl -> case multSucc n' SZero of Refl -> Refl
+multSucc n@(SSucc n') m@(SSucc m') = case plusAsso n m (snatTime n' m) of Refl -> case plusSucc' n' m of Refl -> case plusComm n' (SSucc m) of Refl -> case plusAsso (SSucc m) n' (snatTime n' m) of Refl -> case multSucc n' m of Refl -> Refl
 
 multComm :: forall n m. SNat m-> SNat n -> (m*n) :~: (n*m)
 multComm SZero n = case multZero n of Refl -> Refl
 multComm m SZero = case multZero m of Refl -> Refl
---multComm m@(SSucc m') n = case multDist n (SSucc SZero) m' of Refl -> case multComm m' n of Refl -> Refl 
+multComm m@(SSucc m') n@(SSucc n') = case multSucc n m' of Refl -> case multComm m' n of Refl -> Refl 
 
 
 --implement list function on Vec
@@ -128,8 +134,8 @@ data VecList :: [Nat] -> Type -> Type where
    VLNil :: VecList '[] a
    (:>>) :: Vec n a -> VecList ns a -> VecList (n ': ns) a
 infixr 5 :>>
+deriving instance (Show a) => Show (VecList ns a)
 
-deriving instance Show a => Show (VecList ns a)
 
 type family a - b where
    a   - Zero           = a
@@ -162,15 +168,16 @@ prependToAll sep n@(SSucc n'::SNat n') (x:>xs) = case plusBoth n' n' of Refl -> 
 stuffs = (1 :> 2 :> Nil) :>> (3 :> Nil) :>> (4 :> 5 :> 6 :> Nil) :>> VLNil
 stuff = 5 :> 3 :> 8:> Nil
 test1 = (SSucc (SSucc (SSucc SZero)))
---2.inits
-{-
-type family (a::[Nat]) ++ (b::[Nat]) where
-  ([]::[Nat]) ++ b = b
-  a ++ ([]::[Nat]) = a	
-  (a:as) ++ b = a : as ++ b
--} 
---take two inputs such that the first one works as the standard, and keep subtracting the second one to note the actual number. So here we need to use the (-) type family and the base case is zero zero = [] inspired by Elieen
 
+--2.inits
+
+type family (a::[Nat]) ++ (b::[Nat]) where
+  '[] ++ b = b
+  a ++ '[] = a
+  (a:as) ++ b = a : as ++ b
+
+--take two inputs such that the first one works as the standard, and keep subtracting the second one to note the actual number. So here we need to use the (-) type family and the base case is zero zero = [] inspired by Elieen
+{-
 type family ListOfNat (n :: Nat):: [Nat] where
   ListOfNat Zero = '[]
   ListOfNat n = Snoc '[] n
@@ -178,24 +185,37 @@ type family ListOfNat (n :: Nat):: [Nat] where
 type family Snoc (xs :: [a]) (x :: a) :: [a] where
   Snoc '[] a = a : '[]
   Snoc (x : xs) a = x : (Snoc xs a)
+-}
 
 
-{-
 type family ListOfNat (n ::Nat) :: [Nat] where
  ListOfNat Zero = '[]
  ListOfNat (Succ n') = ListOfNat n' ++ '[(Succ n')]
-
+ 
 sToNat :: SNat n -> Nat
 sToNat SZero = Zero
 sToNat (SSucc s) = Succ (sToNat s)
--}
+
 inits :: forall n a. Vec n a -> VecList (ListOfNat n) a
 inits Nil = VLNil
-inits a@(x:>xs) = case inits xs of xss -> snoc a xss
+inits a@(x :> xs) = snoc a (inits (tailOff a))
+
+tailOff :: Vec (Succ n) a -> Vec n a
+tailOff (x :> Nil) = Nil
+tailOff (x :> xs@(_ :> _))  = x :> tailOff xs 
+
+snoc :: Vec n a -> VecList ns a -> VecList (ns ++ '[n]) a
+snoc xs VLNil = xs :>> VLNil
+snoc xs (ys :>> yss) = ys :>> snoc xs yss 
+
+{-
+inits :: forall n a. Vec n a -> VecList (ListOfNat n) a
+inits Nil = VLNil
+inits a@(x:>xs) = undefined
 
 snoc :: Vec n a -> VecList ns a -> VecList (Snoc ns n) a
 snoc xs (ys :>> yss) = ys :>> snoc xs yss 
-
+-}
 --c. tails
 type family ToList (n :: Nat) :: [Nat] where
   ToList Zero = '[]
@@ -209,27 +229,3 @@ don't acctually need SNat
 tails :: Vec n a -> VecList (ToList n) a
 tails Nil =  VLNil
 tails x@( y :> ys) = x :>> tails ys
-
---d. intercalate
-type family Sum (ns :: [Nat]) :: Nat where
-   Sum '[]       = Zero
-   Sum (n ': ns) = n + Sum ns
-
-{-
-sumList :: [Nat] -> Nat
-sumList [] = Zero
-sumList (x : xs)  = x + sumList xs
--}
-concat :: VecList ns a -> Vec (Sum ns) a
-concat VLNil        = Nil
-concat (xs :>> xss) = xs ++ concat xss
-
-{-
-intercalate :: SNat n -> Vec n a -> VecList ns a -> Vec (Sum ns + ) a 
-intercalate SZero Nil VLNil = Nil
-intercalate SZero Nil xss = case plusZero @(NatToS (Sum ns)) of Refl -> concat xss
-
-type family NatToS (n :: Nat) :: SNat n where
-   NatToS Zero = SZero
-   NatToS (Succ n') = SSucc (NatToS n')
--}
