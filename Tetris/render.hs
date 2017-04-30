@@ -40,6 +40,7 @@ drawField :: Field -> Picture
 drawField f = pictures (map cellToScreen (coordCells f))
     where
       cellToScreen (fx,fy,c)
+         | fy > -3 = pictures[] --if the tetrominos is in the top-wall, do not show it. It is weird
          | c == Empty = pictures[] -- let it be background color if it is an empty cell
          | otherwise = drawCell (fx,fy) (cellColor c)
 

@@ -1,0 +1,27 @@
+This is a simple, incomplete Tetris game written by Haskell.
+you can not rotate the tetrominos and program can not clear full line as normal Tetris.
+But you can use "Left" "Right" key in keyboard to control Tetrominos, and use "Down" Key to speedUp the tetrominos.
+The tetrominos will stop if it touches bottom or there is a tetrominos under it.
+If the stack overflow( touch the top wall), the program will reset the game.
+
+Compilation
+I provide the makefile so you just need to type "make" in command line then it will be compiled automatically.
+Remeber to install Gloss library, it is essential to run this program.
+
+Program design
+the program has six files.
+Main.hs : it contains the main function, so it is the main file of this program.
+
+Tetrominos.hs: this file defines a new data type to represent tetrominos. It has two important functions: containTetro and randomTetro. The first one used to test whether there is a tetrominos at a specific position. The second one used to create a random type tetrominos by a random number, created by the random number Generator imported from System.Random.
+
+field.hs: this file defines several necessary data types to build up the playfield(a grid like field) of Tetris game. it has three important functions. The first one is "coordCells", which get a field and return a list of 3-tuple, which contains the coordinate of cell and cell it self. That is very convenient for us to use when we render the picture. The second important function is "renderTetrominos", which render a tetrominos in a given field. The third important function is "tetroCollides", which test whether the new tetrominos will collide with old tetrominos in the given field.
+
+state.hs: this file defines the State type, which is the fundamental data type to build our game world. ALso, I define the initial game state in this file. The only important function in this file is "resetState", which reset the game state when specific condition meets.(stack overflows)
+
+render.hs: this file takes care of all the drawing parts of my tetris program. There is only one important function "render", which transfer a game state to a picture. But there are several important helper functions to help build render. The first important helper is "cordToScreen", which transfer the coordinate I assign to tetrominos and field to fit the actual screen. Without this helper function, the picture can not be shown correctly on the screen. The second important helper is drawCell, which take the coordinate of a cell and then draw it on screen. Since my field is consist of cell, I use drawCell to help me draw the whole field.
+
+movement.hs : this file takes care of all the movements, including user interaction, of the program. There are a lot of important functions in this file. I will divide them into two groups: user interaction and default movement. For user interaction, userControl deal with all the possible user interaction and it refers moveTetro to control the left-right movement of the tetrominos. For default movement, function "movement" determines the falling behavior of the tetrominos. There is a "tetroValidPos" function helping it to test whether next position it goes will be valid. There is also an important functon "fix" to help fix the tetrominos if they are no longer allowed to move. 
+
+
+Reflection:
+This program is extremely hard. I spent four days -- about 20 hours to finish it. At first, I want to directly use drawing and translate the shape I drawed to let it seems like falling. But then I suddenly realize that it will be very hard for me to test whether two tetrominos collide.(I am happy I thought of this important point at such an early stage)So I have to abandon my whole design. Finally, I decide to build a "field" of the game, which consist of small cells(little square), and keep track of the state in each cell. The idea is good, but hard to implement. I have to create three new data type to represent cell, row and field, building my own coordinate of the game. I have to say this system help a lot when I dealed with movement and rendering picture. If I have more time ,I will definitely chanllenge the very difficult implementation of making tetrominos able to rotate. And also I want to able to finish the clear full line feature, which should be included in the Tetris. Finally, I will add the score system and show it on the screen. This is not hard, but without the other two things missing, it is meaningless.    

@@ -80,8 +80,8 @@ renderTetrominos tetro (tx,ty) f =  Rows (map checkRow (numberRows f))
           | otherwise = Empty
 
 -- here, I will use two field compared with each other,  the firest one is an emptyField with only that specific tetro in it. The second field is the previous field we have. And we compare each cell to see if there is cell filled by two tetros.
-pieceCollides :: Tetrominos -> (Int,Int) -> Field -> Bool
-pieceCollides tetro (tx,ty) old_f = checkField new_f old_f
+tetroCollides :: Tetrominos -> (Int,Int) -> Field -> Bool
+tetroCollides tetro (tx,ty) old_f = checkField new_f old_f
    where
      new_f = renderTetrominos tetro (tx,ty) emptyField
      checkField :: Field -> Field -> Bool
