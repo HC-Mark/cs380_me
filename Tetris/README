@@ -1,8 +1,9 @@
 This is a simple, incomplete Tetris game written by Haskell.
-you can not rotate the tetrominos and program can not clear full line as normal Tetris.
+you can not rotate the tetrominos.
 But you can use "Left" "Right" key in keyboard to control Tetrominos, and use "Down" Key to speedUp the tetrominos.
 The tetrominos will stop if it touches bottom or there is a tetrominos under it.
 If the stack overflow( touch the top wall), the program will reset the game.
+You can see your score on left-top of the screen.
 
 Compilation
 I provide the makefile so you just need to type "make" in command line then it will be compiled automatically.
@@ -24,4 +25,4 @@ movement.hs : this file takes care of all the movements, including user interact
 
 
 Reflection:
-This program is extremely hard. I spent four days -- about 20 hours to finish it. At first, I want to directly use drawing and translate the shape I drawed to let it seems like falling. But then I suddenly realize that it will be very hard for me to test whether two tetrominos collide.(I am happy I thought of this important point at such an early stage)So I have to abandon my whole design. Finally, I decide to build a "field" of the game, which consist of small cells(little square), and keep track of the state in each cell. The idea is good, but hard to implement. I have to create three new data type to represent cell, row and field, building my own coordinate of the game. I have to say this system help a lot when I dealed with movement and rendering picture. If I have more time ,I will definitely chanllenge the very difficult implementation of making tetrominos able to rotate. And also I want to able to finish the clear full line feature, which should be included in the Tetris. Finally, I will add the score system and show it on the screen. This is not hard, but without the other two things missing, it is meaningless.    
+This program is extremely hard. I spent four days -- about 20 hours to finish it. At first, I want to directly use drawing and translate the shape I drawed to let it seems like falling. But then I suddenly realize that it will be very hard for me to test whether two tetrominos collide.(I am happy I thought of this important point at such an early stage)So I have to abandon my whole design. Finally, I decide to build a "field" of the game, which consist of small cells(little square), and keep track of the state in each cell. The idea is good, but hard to implement. I have to create three new data type to represent cell, row and field, building my own coordinate of the game. I have to say this system help a lot when I dealed with movement and rendering picture. If I have more time ,I will definitely chanllenge the very difficult implementation of making tetrominos able to rotate. 
