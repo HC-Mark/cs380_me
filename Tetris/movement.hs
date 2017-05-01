@@ -64,7 +64,7 @@ tetroValidPos coord tetro field = (fieldValidPos coord tetro) && not (tetroColli
 
 movement :: State -> State
 movement state
-  | nextPosInvalid = fix state
+  | nextPosInvalid = handleFullRows $ fix state
   | otherwise = state {tetroPos = new_tetroPos}
      where
        nextPosInvalid = not (tetroValidPos new_tetroPos (tetrominos state) (field state))
@@ -83,6 +83,36 @@ fix state
                       where
                         randomNum :: (Double, StdGen)
                         randomNum = randomR (1.0, 1000.0) (randomSeed state)
+
+
+clearCountLines :: Field -> (Field, Int)
+clearCountLines (Rows rs) = (new_field, count)
+   where
+     -- add the cleared line(empty row) to the top of screen
+     new_field = Rows (cleared ++ remaining)
+     remaining = filter notFull rs
+     count = length (filter isFull rs)
+     cleared :: [Row]
+     cleared = replicate count emptyRow
+     
+     isFull :: Row -> Bool
+     isFull (Cells cs)  = and (map filled cs)
+
+     notFull :: Row -> Bool
+     notFull r = not (isFull r)
+
+     filled :: Cell -> Bool
+     filled c
+         | c /= Empty = True
+         | otherwise = False
+
+handleFullRows :: State -> State
+handleFullRows state = state {
+                              field = fst result
+                             , score = (score state) + 10 * (snd result) -- get ten points for each full row
+                             }
+          where
+            result = clearCountLines $ field state
 
 
 {-

@@ -45,11 +45,13 @@ drawField f = pictures (map cellToScreen (coordCells f))
          | otherwise = drawCell (fx,fy) (cellColor c)
 
 render :: State -> Picture
-render state = pictures [walls, playfield,activeTetro]
+render state = pictures [walls, playfield,activeTetro,scoreCount]
   where
     walls = color wallColor (rectangleSolid (fromIntegral wallWidth) (fromIntegral wallHeight))
     playfield = pictures [(color fieldColor (rectangleSolid (fromIntegral fieldWidth) (fromIntegral fieldHeight))), drawField (field state)]
     activeTetro = drawField (renderTetrominos (tetrominos state) (tetroPos state) emptyField)
-
+    scoreCount = translate (-600.0) (200.0) (pictures [playerScore])
+         where
+           playerScore = color (greyN 0.5) $ Text $ "Score: " ++ (show(score state))
 
 

@@ -14,6 +14,7 @@ data State = Create
              , tetroPos :: (Int,Int)
              , randomSeed :: StdGen
              , speedUp :: Bool
+             , score :: Int
              } deriving (Show)
 
 initialState :: State
@@ -25,6 +26,7 @@ initialState = Create
                , tetroPos = (0,0)
                , randomSeed = mkStdGen 0 -- create a new random generator
                , speedUp = False -- the tetro should have normal speed at first
+               , score = 0
                }
 
 resetState :: State -> State
