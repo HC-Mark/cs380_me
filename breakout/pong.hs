@@ -40,7 +40,7 @@ initialWorld = World { w_lpaddle = 0
                      , w_ball_motion = (ballSpeed, 0)
                      , w_paddle_motion  = 0
                      , w_playing = False
-                     ,w_brickList = False}
+                     ,w_brickList = True}
 
 render :: World -> Picture
 render (World { w_lpaddle = lpaddle
@@ -52,7 +52,7 @@ render (World { w_lpaddle = lpaddle
     (translate ball_x ball_y $
      color red $
      circleSolid ballRadius)<>
-     (pictures $ renderAll (brickList col row))
+     (pictures $ renderAll brickList)
      --first brick has index (1,1)
 -- here we first translate the origin to left top of screen, then we create two paddles and a ball
 
@@ -83,7 +83,7 @@ step _ w@(World { w_lpaddle = lpaddle
           | ball_x' > stageWidthF/2 - ballRadius
           = -ballSpeed
 {-
-          | ballHoriCollides ball_x'
+          | ballHoriCollides ball_x' brickList
           = -ball_dx
 -}
           | otherwise
@@ -97,7 +97,7 @@ step _ w@(World { w_lpaddle = lpaddle
           | ball_y' > -(ballRadius + paddleHeight)
           = -ballSpeed
 {-
-          | ballVertCollides ball_y'
+          | ballVertCollides ball_y' brickList
           = -ball_dy
 -}
           | otherwise
@@ -225,11 +225,26 @@ renderAll = (renderRow row)
     renderCol y x = [renderBrick(x,y)] <> (renderCol y (x-1))
 -}
 
-ballHoriCollides :: Float -> Bool
-ballHoriCollides = error "ballHoriCollides : unimplemented"
+ballHoriCollides :: Float -> [Brick] -> Bool
+ballHoriCollides ball_x brickList = testHori (ball_x brickList)
+   where
+     testHori :: Float -> [Brick] -> Bool
+     testHori x [] = False
+     testHori x (b@(Brick{coord = (bx,by)}):bs) = x `inRange` (center_x - brickWidth/2, center_x + brickWidth/2) || (testHori x bs)
+       where
+         center_x = fst $ coordToScreen (bx,by)
+     
+-- error "ballHoriCollides : unimplemented"
 
 ballVertCollides :: Float -> Bool
-ballVertCollides = error "ballVertCollides : unimplemented"
+ballVertCollides ball_y brickList = testVert (ball_y brickList)
+  where
+    testVert :: Float -> [Brick] -> Bool
+    testVert y [] = False
+    testVert y (b@(Brick{coord = (bx,by)}):bs) = y `inRange` (center_y - brickHeight/2, center_y + brickHeight/2) || (testVert y bs)
+      where
+       center_y = snd $ coordToScreen (bx,by)
+-- error "ballVertCollides : unimplemented"
  
 main :: IO ()
 main = play (InWindow "Pong" (stageWidth, stageHeight) (200, 200))
