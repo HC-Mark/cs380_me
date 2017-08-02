@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 module Pong where
 
 import Graphics.Gloss.Interface.Pure.Game
@@ -33,18 +34,19 @@ data World = World { w_lpaddle :: Float
                    , w_ball_motion :: (Float, Float)
                    , w_paddle_motion  :: Float
                    , w_playing :: Bool
-                   , w_brickList :: Bool}
+                   , w_brickList :: [Brick]}
 
 initialWorld = World { w_lpaddle = 0
                      , w_ball    = (0,-stageHeightF/2)
                      , w_ball_motion = (ballSpeed, 0)
                      , w_paddle_motion  = 0
                      , w_playing = False
-                     ,w_brickList = True}
+                     , w_brickList = brickList}
 
 render :: World -> Picture
 render (World { w_lpaddle = lpaddle
-              , w_ball    = (ball_x, ball_y) })
+              , w_ball    = (ball_x, ball_y)
+              , w_brickList = brickList_s})
   = translate 0 (stageHeightF/2) $
     (translate lpaddle (-stageHeightF + paddleHeight/2) $
      color blue $
@@ -52,7 +54,7 @@ render (World { w_lpaddle = lpaddle
     (translate ball_x ball_y $
      color red $
      circleSolid ballRadius)<>
-     (pictures $ renderAll brickList)
+     (pictures $ renderAll brickList_s)
      --first brick has index (1,1)
 -- here we first translate the origin to left top of screen, then we create two paddles and a ball
 
@@ -71,7 +73,8 @@ step _ w@(World { w_playing = False }) = w
 step _ w@(World { w_lpaddle = lpaddle
                 , w_ball    = (ball_x, ball_y)
                 , w_ball_motion = (ball_dx, ball_dy)
-                , w_paddle_motion = paddle_motion })
+                , w_paddle_motion = paddle_motion
+                , w_brickList = brickList_s})
   = let lpaddle' = clampPaddle (lpaddle + paddle_motion)
         ball_x'  = ball_x + ball_dx
         ball_y'  = ball_y + ball_dy
@@ -84,8 +87,9 @@ step _ w@(World { w_lpaddle = lpaddle
           = -ballSpeed
 -- should not directly put this conditon here, since we want the ball to move in opposite direction only when it touch the brick
 -- hence, it's y should also be concern
+-- horizontal collides means change the 
 
-          | ballHoriCollides ball_x' ball_y' brickList
+          | ballVertCollides ball_y' brickList_s
           = -ball_dx
 
           | otherwise
@@ -99,18 +103,21 @@ step _ w@(World { w_lpaddle = lpaddle
           | ball_y' > -(ballRadius + paddleHeight)
           = -ballSpeed
 
-          | ballVertCollides ball_y' brickList
-          = -ball_dy
+          | ballHoriCollides ball_x' ball_y' brickList_s
+          = -ball_dy          
 
           | otherwise
           = ball_dy
+
+        brickList_s' =  brickExistTest ball_x' ball_y' brickList_s  
 
         playing' =  not (ball_y' < -(stageHeightF-ballRadius))
     in
     w { w_lpaddle = lpaddle'
       , w_ball    = (ball_x', ball_y')
-      , w_ball_motion = (ball_dx', ball_dy')
-      , w_playing = playing' }
+      , w_ball_motion = (ball_dx',ball_dy')
+      , w_playing = playing'	   
+      , w_brickList = brickList_s'}
 
 react :: Event -> World -> World
 react (EventKey (MouseButton LeftButton) Down _ _)
@@ -237,7 +244,8 @@ ballHoriCollides ball_x ball_y brickList = testHori ball_x ball_y brickList
    where
      testHori :: Float -> Float -> [Brick] -> Bool
      testHori x _ [] = False
-     testHori x y (b@(Brick{coord = (bx,by)}):bs) = (x `inRange` ((fromIntegral center_x) - brickWidthF/2 , (fromIntegral center_x) + brickWidthF/2 ) && y `inRange`((fromIntegral center_y) - brickHeightF/2, (fromIntegral center_y) + brickHeightF/2 )) || (testHori x y bs)
+     testHori x y  (b@(Brick{exist = False}):bs) = False || testHori x y bs
+     testHori x y (b@(Brick{coord = (bx,by)}):bs) = (x `inRange` ((fromIntegral center_x) - brickWidthF/2 - ballRadius , (fromIntegral center_x) + brickWidthF/2 +ballRadius ) && y `inRange`((fromIntegral center_y) - brickHeightF/2- ballRadius , (fromIntegral center_y) + brickHeightF/2 + ballRadius)) || (testHori x y bs)
      -- I am considering to add a ballRadius here, but it shows that it will always make the ball goes to opposite x direction
        where
          center_x = fst $ coordToScreen (bx,by)
@@ -250,11 +258,24 @@ ballVertCollides ball_y brickList = testVert ball_y brickList
   where
     testVert :: Float -> [Brick] -> Bool
     testVert y [] = False
-    testVert y (b@(Brick{coord = (bx,by)}):bs) = y `inRange` ((fromIntegral center_y) - brickHeightF/2-ballRadius, (fromIntegral center_y) + brickHeightF/2+ballRadius) || (testVert y bs)
+    testVert y (b@(Brick{exist = False}):bs) = False || testVert y bs
+    testVert y (b@(Brick{coord = (bx,by)}):bs) = y `inRange` ((fromIntegral center_y) - brickHeightF/2 - ballRadius, (fromIntegral center_y) + brickHeightF/2+ballRadius) || (testVert y bs)
       where
        center_y = snd $ coordToScreen (bx,by)
 -- error "ballVertCollides : unimplemented"
- 
+
+--test whether we touch a brick, if so, we turn that brick to false, which will not be shown
+brickExistTest :: Float -> Float -> [Brick] -> [Brick]
+brickExistTest _ _ [] = []
+brickExistTest ball_x ball_y (b@(Brick{exist = False}):bs) = b: (brickExistTest ball_x ball_y bs)
+brickExistTest ball_x ball_y (b@(Brick{coord = (bx,by), exist = True}) :bs)
+   | ball_x `inRange` ((fromIntegral center_x) - brickWidthF/2 - ballRadius , (fromIntegral center_x) + brickWidthF/2 +ballRadius) && ball_y `inRange` ((fromIntegral center_y) - brickHeightF/2- ballRadius , (fromIntegral center_y) + brickHeightF/2 + ballRadius) = (removeBrick b) : bs
+   | otherwise = b : (brickExistTest ball_x ball_y bs)
+     where
+       removeBrick :: Brick -> Brick
+       removeBrick (Brick {coord = (bx,by), color_ = col, exist = True}) = Brick {coord = (bx,by), color_ = col, exist = False}
+       center_x = fst $ coordToScreen (bx,by)
+       center_y = snd $ coordToScreen (bx,by)
 main :: IO ()
 main = play (InWindow "Pong" (stageWidth, stageHeight) (200, 200))
             white
