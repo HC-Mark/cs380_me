@@ -89,7 +89,7 @@ step _ w@(World { w_lpaddle = lpaddle
 -- hence, it's y should also be concern
 -- horizontal collides means change the 
 
-          | ballVertCollides ball_y' brickList_s
+          | ballVertCollides ball_x' ball_y' brickList_s
           = -ball_dx
 
           | otherwise
@@ -253,15 +253,16 @@ ballHoriCollides ball_x ball_y brickList = testHori ball_x ball_y brickList
      
 -- error "ballHoriCollides : unimplemented"
 
-ballVertCollides :: Float -> [Brick] -> Bool
-ballVertCollides ball_y brickList = testVert ball_y brickList
+ballVertCollides :: Float -> Float -> [Brick] -> Bool
+ballVertCollides ball_x ball_y brickList = testVert ball_x ball_y brickList
   where
-    testVert :: Float -> [Brick] -> Bool
-    testVert y [] = False
-    testVert y (b@(Brick{exist = False}):bs) = False || testVert y bs
-    testVert y (b@(Brick{coord = (bx,by)}):bs) = y `inRange` ((fromIntegral center_y) - brickHeightF/2 - ballRadius, (fromIntegral center_y) + brickHeightF/2+ballRadius) || (testVert y bs)
+    testVert :: Float -> Float -> [Brick] -> Bool
+    testVert _ _ [] = False
+    testVert x y (b@(Brick{exist = False}):bs) = False || testVert x y bs
+    testVert x y (b@(Brick{coord = (bx,by)}):bs) =(y `inRange` ((fromIntegral center_y) - brickHeightF/2 - ballRadius, (fromIntegral center_y) + brickHeightF/2+ballRadius) &&  x `inRange` ((fromIntegral center_x) - brickWidthF/2 - ballRadius , (fromIntegral center_x) + brickWidthF/2 +ballRadius )) || (testVert x y bs)
       where
        center_y = snd $ coordToScreen (bx,by)
+       center_x = fst $ coordToScreen (bx,by)
 -- error "ballVertCollides : unimplemented"
 
 --test whether we touch a brick, if so, we turn that brick to false, which will not be shown
