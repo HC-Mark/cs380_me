@@ -149,11 +149,21 @@ row = 4
 col = 10
 
 -- where should I call this function to create this list?
+-- find a way to make it a constant list
+
+brickList :: [Brick]
+brickList = createBrickList col row
+  where 
+   createBrickList :: Int -> Int -> [Brick]
+   createBrickList _ 0 = []
+   createBrickList 0 row = createBrickList col (row-1)
+   createBrickList col row = [createBrick(col,row)] ++ (createBrickList (col-1) row)
+ {-  
 brickList :: Int -> Int ->[Brick]
 brickList _ 0 = []
 brickList 0 row = brickList col (row-1)
 brickList col row = [createBrick(col,row)] ++ (brickList (col-1) row)
-
+-}
 createBrick :: (Int,Int) -> Brick
 createBrick (x,y) = Brick{
                      coord = (x,y)
